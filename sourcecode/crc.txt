@@ -1,0 +1,46 @@
+module crc(clk,data,rst_n,crc);
+
+input [7:0] data;					//需要校验的数据
+input clk;							//时钟信号
+input rst_n;						//将校验码置零/切换校验数据
+
+output reg [15:0]crc=0;			//CRC校验码（FCS）
+
+wire [23:0]stemp; 				//data左移16位（通过拼接值实现）
+reg [23:0]temp=0;					//stemp值寄存器
+parameter polynomial=17'b1_0001_0000_0010_0001;
+//生成多项式为g(x)=X^16+X^12+X^5+1（CRC-16/XMODEM）
+
+assign stemp={data,16'b0000000000000000};
+
+always @(posedge clk or negedge rst_n)
+begin 
+	if(!rst_n)						//当rst_n为低电平时，crc异步清零，将stemp赋值给temp
+	begin
+		crc<=0;
+		temp<=stemp; 
+	end
+	else 								//当rst_n为高电平时，进行模二运算
+	begin
+		if(temp[23]) 
+			temp[23:7]<=temp[23:7]^polynomial;
+		else if(temp[22]) 
+			temp[22:6]<=temp[22:6]^polynomial;
+		else if(temp[21]) 
+			temp[21:5]<=temp[21:5]^polynomial;
+		else if(temp[20]) 
+			temp[20:4]<=temp[20:4]^polynomial;
+		else if(temp[19]) 
+			temp[19:3]<=temp[19:3]^polynomial;
+		else if(temp[18]) 
+			temp[18:2]<=temp[18:2]^polynomial;
+		else if(temp[17]) 
+			temp[17:1]<=temp[17:1]^polynomial;
+		else if(temp[16]) 
+			temp[16:0]<=temp[16:0]^polynomial;
+		else   
+			crc<=temp[15:0];     //当temp的高8位都为0后，输出crc（temp的低16位）
+	end
+end  
+
+endmodule
